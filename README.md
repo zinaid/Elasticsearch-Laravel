@@ -252,3 +252,38 @@ Route::get('/dashboard', function () {
 ```
 
 We will create two ways of fetching data, using Eloquent and using Elasticsearch. We will add repository (using repository pattern) Papers inside app. Then we will create repository interface:
+
+```
+<?php
+
+namespace App\Papers;
+use Illuminate\Database\Eloquent\Collection;
+
+interface SearchRepository
+{
+    public function search(string $query): Collection;
+}
+```
+
+Then we will create our Eloquent search implementation inside the same folder Papers and inside EloquentSearch.php.
+
+```
+<?php
+
+namespace App\Articles;
+use App\Models\Paper;
+use Illuminate\Database\Eloquent\Collection;
+
+class EloquentSearch implements SearchRepository
+{
+    public function search(string $term): Collection
+    {
+        return Paper::query()
+            ->where(fn ($query) => (
+                $query->where('content', 'LIKE', "%{$term}%")
+                    ->orWhere('title', 'LIKE', "%{$term}%")
+            ))
+            ->get();
+    }
+}
+```` 
