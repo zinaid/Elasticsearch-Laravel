@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>ELASTICSEARCH WITH LARAVEL</title>
+        <style>
+/* From extension vscode.github */
+/*---------------------------------------------------------------------------------------------
+ *  Copyright (c) Microsoft Corporation. All rights reserved.
+ *  Licensed under the MIT License. See License.txt in the project root for license information.
+ *--------------------------------------------------------------------------------------------*/
+
+.vscode-dark img[src$=\#gh-light-mode-only],
+.vscode-light img[src$=\#gh-dark-mode-only] {
+	display: none;
+}
+
+/* From extension ms-toolsai.jupyter */
+/* These classnames are inherited from bootstrap, but are present in most notebook renderers */
+
+.alert {
+    width: auto;
+    padding: 1em;
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+.alert > *:last-child {
+    margin-bottom: 0;
+}
+#preview > .alert:last-child {
+    /* Prevent this being set to zero by the default notebook stylesheet */
+    padding-bottom: 1em;
+}
+
+.alert-success {
+    /* Note there is no suitable color available, so we just copy "info" */
+    background-color: var(--theme-info-background);
+    color: var(--theme-info-foreground);
+}
+.alert-info {
+    background-color: var(--theme-info-background);
+    color: var(--theme-info-foreground);
+}
+.alert-warning {
+    background-color: var(--theme-warning-background);
+    color: var(--theme-warning-foreground);
+}
+.alert-danger {
+    background-color: var(--theme-error-background);
+    color: var(--theme-error-foreground);
+}
+
+</style>
+        
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
+<style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe WPC', 'Segoe UI', system-ui, 'Ubuntu', 'Droid Sans', sans-serif;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+        </style>
+        <style>
+.task-list-item {
+    list-style-type: none;
+}
+
+.task-list-item-checkbox {
+    margin-left: -20px;
+    vertical-align: middle;
+    pointer-events: none;
+}
+</style>
+        
+    </head>
+    <body class="vscode-body vscode-light">
+        <h1 id="elasticsearch-with-laravel">ELASTICSEARCH WITH LARAVEL</h1>
+<p>In this project we will try to integrate Laravel with Elasticsearch. We will use Docker for creating microservises.</p>
+<p>First of all create a clean Laravel project with command:</p>
+<p><code>composer create-project --prefer-dist laravel/laravel elasticsearch-test</code></p>
+<p>After that we will push Laravel Sail docker-compose.yml file.</p>
+<p><code>php artisan sail:install --with=mysql</code></p>
+<p>Docker with its services is started with:</p>
+<p><code>./vendor/bin/sail up -d</code></p>
+<p>If everything works fine you can open your application on the link:</p>
+<p><code>localhost:8000</code>, as well as the mysql on the link <code>localhost:3006</code>.</p>
+<p>Then we will add elasticsearch to our services in docker-compose.yml file using these lines of code:</p>
+<pre><code>elasticsearch:
+         image: docker.elastic.co/elasticsearch/elasticsearch:7.5.2
+         environment:
+             - discovery.type=single-node
+         ports:
+             - 9200:9200
+             - 9300:9300
+         volumes:
+             - sailelasticsearch:/usr/share/elasticsearch/data
+         networks:
+             - sail 
+</code></pre>
+<p>Abovementioned code creates a container elasticsearch and downloads its image. Ports used by elasticsearch are 9200 and 9300. We also define a constant volume for elasticsearch data. We also say that elasticsearch belongs to our network. Besides that we also add volume named for eq. sailelasticsearch.</p>
+<pre><code>volumes:
+     sailmysql:
+         driver: local
+     sailelasticsearch:
+         driver: local 
+</code></pre>
+<p>Docker is started using the command:</p>
+<pre><code>./vendor/bin/sail up -d
+</code></pre>
+<p>With the above code we downloaded the official Elasticsearch image and started it as an image in Docker. We can check the work of our Elasticsearch service with curl on port 9200.</p>
+<pre><code> curl localhost:9200
+</code></pre>
+<p>The response should be:</p>
+<pre><code>{
+  &quot;name&quot; : &quot;9f4511cabca0&quot;,
+  &quot;cluster_name&quot; : &quot;docker-cluster&quot;,
+  &quot;cluster_uuid&quot; : &quot;_MKrhY9rQ7yeu8WE-7Bi_g&quot;,
+  &quot;version&quot; : {
+    &quot;number&quot; : &quot;7.5.2&quot;,
+    &quot;build_flavor&quot; : &quot;default&quot;,
+    &quot;build_type&quot; : &quot;docker&quot;,
+    &quot;build_hash&quot; : &quot;8bec50e1e0ad29dad5653712cf3bb580cd1afcdf&quot;,
+    &quot;build_date&quot; : &quot;2020-01-15T12:11:52.313576Z&quot;,
+    &quot;build_snapshot&quot; : false,
+    &quot;lucene_version&quot; : &quot;8.3.0&quot;,
+    &quot;minimum_wire_compatibility_version&quot; : &quot;6.8.0&quot;,
+    &quot;minimum_index_compatibility_version&quot; : &quot;6.0.0-beta1&quot;
+  },
+  &quot;tagline&quot; : &quot;You Know, for Search&quot;
+}
+</code></pre>
+<p>If we get this kind of response we are set to go, because we have all of our services set and running.</p>
+<h2 id="app">APP</h2>
+<p>For this example we will create an application that contains a table of scientific papers through which we want to search.</p>
+<p>First of all we will install elasticsearch to our application using composer.</p>
+<pre><code>./vendor/bin/sail composer require elasticsearch/elasticsearch
+</code></pre>
+<p>Because we don't want to lose time on frontend development and auth creation, we will use Laravel Breeze package and scaffold a basic application.</p>
+<pre><code>./vendor/bin/sail composer require laravel/breeze --dev
+</code></pre>
+<p>After that we can install breeze, pull all npm dependecies, compile assets and run migration because we need our User model and table for breeze to work.</p>
+<pre><code>./vendor/bin/sail artisan breeze:install
+</code></pre>
+<p>Npm dependecies and assets compilation should be done out of the wsl.</p>
+<pre><code>npm install
+npm run dev
+</code></pre>
+<p>Then we need to migrate our tables to mysql database.</p>
+<pre><code>./vendor/bin/sail artisan migrate
+</code></pre>
+<p>Now our application has a login and registar functionalities with elementary tailwind dashboard, and auth frontend set.</p>
+<p>After registering a new user and after we test our login functionalities, we approach to our main part and that is creating Paper model. Besides a model, we will create a migration and a factory (for seeding the database with dummy data).</p>
+<pre><code>./vendor/bin/sail artisan make:model -mf Paper
+</code></pre>
+<p>Our model Paper.php, migration and factory PaperFactory.php are created. Then we will modify our migration by adding some fields that we will use in our search.</p>
+
+        
+        
+    </body>
+    </html>
