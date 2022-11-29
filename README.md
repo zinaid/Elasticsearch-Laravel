@@ -133,3 +133,8 @@ public function up()
         });
     }
 ```
+
+Keywords are going to be an Array, but they need to be stored as a JSON into a papers table. Because of that we need to modify our Paper.php model to cast it like so:
+
+```
+```
