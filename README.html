@@ -51,7 +51,8 @@
 }
 
 </style>
-        
+        <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex/dist/katex.min.css">
+<link href="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.css" rel="stylesheet" type="text/css">
         <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/markdown.css">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Microsoft/vscode/extensions/markdown-language-features/media/highlight.css">
 <style>
@@ -154,8 +155,19 @@ npm run dev
 <pre><code>./vendor/bin/sail artisan make:model -mf Paper
 </code></pre>
 <p>Our model Paper.php, migration and factory PaperFactory.php are created. Then we will modify our migration by adding some fields that we will use in our search.</p>
+<pre><code>public function up()
+    {
+        Schema::create('papers', function (Blueprint $table) {
+            $table-&gt;id();
+            $table-&gt;string('title');
+            $table-&gt;text('content');
+            $table-&gt;json('keywords');
+            $table-&gt;timestamps();
+        });
+    }
+</code></pre>
 
-        
+        <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
         
     </body>
     </html>

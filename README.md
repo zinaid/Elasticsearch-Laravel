@@ -121,4 +121,15 @@ After registering a new user and after we test our login functionalities, we app
 ```
 Our model Paper.php, migration and factory PaperFactory.php are created. Then we will modify our migration by adding some fields that we will use in our search.
 
-
+```
+public function up()
+    {
+        Schema::create('papers', function (Blueprint $table) {
+            $table->id();
+            $table->string('title');
+            $table->text('content');
+            $table->json('keywords');
+            $table->timestamps();
+        });
+    }
+```
