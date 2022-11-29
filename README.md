@@ -137,4 +137,64 @@ public function up()
 Keywords are going to be an Array, but they need to be stored as a JSON into a papers table. Because of that we need to modify our Paper.php model to cast it like so:
 
 ```
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Paper extends Model
+{
+    use HasFactory;
+    protected $casts = [
+        'keywords' => 'json',
+    ];
+}
+```
+Then, we generate some dummy data using seeders and factory for our Paper model. Inside DatabaseSeeder.php that is placed under database/seeders we add the following code.
+
+```
+<?php
+
+namespace Database\Seeders;
+use App\Models\Paper;
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    /**
+     * Seed the application's database.
+     *
+     * @return void
+     */
+    public function run()
+    {
+        Paper::factory()->times(50)->create();
+    }
+}
+```
+
+Then we modify created factory PaperFactory.php with the following code:
+
+```
+<?php
+ namespace Database\Factories;
+ use App\Models\Paper;
+ use Illuminate\Database\Eloquent\Factories\Factory;
+ class ArticleFactory extends Factory
+ {
+    protected $model = Paper::class;
+    public function definition()
+    {
+        return [
+            'title' => $this->faker->sentence(),
+            'content' => $this->faker->text(),
+            'keywords' => collect(['kafka', 'python', 'php', 'javascript', 'elasticsearch'])
+                ->random(2)
+                ->values()
+                ->all(),
+        ];
+    }
+} 
 ```

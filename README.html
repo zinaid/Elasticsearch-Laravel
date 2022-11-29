@@ -167,7 +167,62 @@ npm run dev
     }
 </code></pre>
 <p>Keywords are going to be an Array, but they need to be stored as a JSON into a papers table. Because of that we need to modify our Paper.php model to cast it like so:</p>
-<pre><code></code></pre>
+<pre><code>&lt;?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class Paper extends Model
+{
+    use HasFactory;
+    protected $casts = [
+        'keywords' =&gt; 'json',
+    ];
+}
+</code></pre>
+<p>Then, we generate some dummy data using seeders and factory for our Paper model. Inside DatabaseSeeder.php that is placed under database/seeders we add the following code.</p>
+<pre><code>&lt;?php
+
+namespace Database\Seeders;
+use App\Models\Paper;
+use Illuminate\Database\Seeder;
+
+class DatabaseSeeder extends Seeder
+{
+    /**
+     * Seed the application's database.
+     *
+     * @return void
+     */
+    public function run()
+    {
+        Paper::factory()-&gt;times(50)-&gt;create();
+    }
+}
+</code></pre>
+<p>Then we modify created factory PaperFactory.php with the following code:</p>
+<pre><code>&lt;?php
+ namespace Database\Factories;
+ use App\Models\Paper;
+ use Illuminate\Database\Eloquent\Factories\Factory;
+ class ArticleFactory extends Factory
+ {
+    protected $model = Paper::class;
+    public function definition()
+    {
+        return [
+            'title' =&gt; $this-&gt;faker-&gt;sentence(),
+            'content' =&gt; $this-&gt;faker-&gt;text(),
+            'keywords' =&gt; collect(['kafka', 'python', 'php', 'javascript', 'elasticsearch'])
+                -&gt;random(2)
+                -&gt;values()
+                -&gt;all(),
+        ];
+    }
+} 
+</code></pre>
 
         <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
         
