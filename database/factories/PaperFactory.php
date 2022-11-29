@@ -1,7 +1,7 @@
 <?php
 
 namespace Database\Factories;
-use App\Http\Models\Paper;
+use App\Models\Paper;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**

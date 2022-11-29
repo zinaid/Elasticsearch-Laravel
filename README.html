@@ -223,6 +223,51 @@ class DatabaseSeeder extends Seeder
     }
 } 
 </code></pre>
+<p>Now we test our seeders and migrate our 50 papers.</p>
+<pre><code>./vendor/bin/sail artisan migrate:fresh --seed
+
+</code></pre>
+<p>For viewing our entered papers we will modify dashboard.blade.php to render list of all papers.</p>
+<pre><code>&lt;x-app-layout&gt;
+    &lt;x-slot name=&quot;header&quot;&gt;
+        &lt;h2 class=&quot;font-semibold text-xl text-gray-800 leading-tight&quot;&gt;
+            {{ __('Papers') }} &lt;span class=&quot;text-gray-400&quot;&gt;({{ $papers-&gt;count() }})&lt;/span&gt;
+        &lt;/h2&gt;
+    &lt;/x-slot&gt;
+
+    &lt;div class=&quot;py-12&quot;&gt;
+        &lt;div class=&quot;max-w-7xl mx-auto sm:px-6 lg:px-8&quot;&gt;
+            &lt;div class=&quot;bg-white overflow-hidden shadow-sm sm:rounded-lg&quot;&gt;
+                &lt;div class=&quot;p-6 text-gray-900&quot;&gt;
+                @forelse ($papers as $paper)
+                    &lt;papers class=&quot;space-y-1&quot;&gt;
+                        &lt;h2 class=&quot;font-semibold text-2xl&quot;&gt;{{ $paper-&gt;title }}&lt;/h2&gt;
+
+                        &lt;p class=&quot;m-0&quot;&gt;{{ $paper-&gt;body }}&lt;/body&gt;
+
+                        &lt;div&gt;
+                            @foreach ($paper-&gt;keywords as $keyword)
+                                &lt;span class=&quot;text-xs px-2 py-1 rounded bg-indigo-50 text-indigo-500&quot;&gt;{{ $keyword}}&lt;/span&gt;
+                            @endforeach
+                        &lt;/div&gt;
+                    &lt;/papers&gt;
+                @empty
+                    &lt;p&gt;No papers found&lt;/p&gt;
+                @endforelse
+                &lt;/div&gt;
+            &lt;/div&gt;
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/x-app-layout&gt;
+</code></pre>
+<p>Ofcoure, we now need to modify <code>dashboard</code> route:</p>
+<pre><code>Route::get('/dashboard', function () {
+    return view('dashboard', [
+        'papers' =&gt; App\Models\Paper::all(),
+    ]);
+})-&gt;middleware(['auth'])-&gt;name('dashboard'); 
+</code></pre>
+<p>We will create two ways of fetching data, using Eloquent and using Elasticsearch. We will add repository (using repository pattern) Papers inside app. Then we will create repository interface:</p>
 
         <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
         
