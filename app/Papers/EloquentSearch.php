@@ -1,18 +1,18 @@
 <?php
 
-namespace App\Articles;
-use App\Models\Paper;
+namespace App\Papers;
+
+use App\Paper;
+use App\Papers\PapersRepository;
 use Illuminate\Database\Eloquent\Collection;
 
-class EloquentSearch implements SearchRepository
+class EloquentSearch implements PapersRepository
 {
-    public function search(string $term): Collection
+    public function search(string $query = ''): Collection
     {
         return Paper::query()
-            ->where(fn ($query) => (
-                $query->where('content', 'LIKE', "%{$term}%")
-                    ->orWhere('title', 'LIKE', "%{$term}%")
-            ))
+            ->where('body', 'like', "%{$query}%")
+            ->orWhere('title', 'like', "%{$query}%")
             ->get();
     }
-} 
+}
