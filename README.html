@@ -271,33 +271,77 @@ class DatabaseSeeder extends Seeder
 <pre><code>&lt;?php
 
 namespace App\Papers;
+
 use Illuminate\Database\Eloquent\Collection;
 
-interface SearchRepository
+interface PapersRepository
 {
-    public function search(string $query): Collection;
+    public function search(string $query = ''): Collection;
 }
 </code></pre>
 <p>Then we will create our Eloquent search implementation inside the same folder Papers and inside EloquentSearch.php.</p>
 <pre><code>&lt;?php
 
-namespace App\Articles;
+namespace App\Papers;
+
 use App\Models\Paper;
+use App\Papers\PapersRepository;
 use Illuminate\Database\Eloquent\Collection;
 
-class EloquentSearch implements SearchRepository
+class EloquentSearch implements PapersRepository
 {
-    public function search(string $term): Collection
+    public function search(string $query = ''): Collection
     {
         return Paper::query()
-            -&gt;where(fn ($query) =&gt; (
-                $query-&gt;where('content', 'LIKE', &quot;%{$term}%&quot;)
-                    -&gt;orWhere('title', 'LIKE', &quot;%{$term}%&quot;)
-            ))
+            -&gt;where('content', 'like', &quot;%{$query}%&quot;)
+            -&gt;orWhere('title', 'like', &quot;%{$query}%&quot;)
             -&gt;get();
     }
 }
 </code></pre>
+<p>Now we bind that interface in our AppServiceProviders.php.</p>
+<pre><code>&lt;?php
+
+namespace App\Providers;
+use Illuminate\Support\ServiceProvider;
+use App\Papers\EloquentSearch;
+use App\Papers\PapersRepository;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function register()
+    {
+        $this-&gt;app-&gt;bind(
+            PapersRepository::class, EloquentSearch::class);
+    }
+
+    
+    public function boot()
+    {
+        //
+    }
+}
+</code></pre>
+<p>Then we need to modify our dashboard route in web.php because it needs to support searching for articles. It will accept <code>q</code> Query String and then it will use the repository we have created instead of listing papers.</p>
+<pre><code>&lt;?php
+
+use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Route;
+use App\Papers\PapersRepository;
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+Route::get('/dashboard', function (PapersRepository $repository) {
+    return view('dashboard', [
+        'papers' =&gt; request()-&gt;has('q')
+            ? $repository-&gt;search(request('q'))
+            : App\Models\Paper::all(),
+    ]);
+})-&gt;middleware(['auth'])-&gt;name('dashboard'); 
+</code></pre>
+<p>After that we will add our search input inside dashboard.blade.html. This will be a regular form with method GET and action to dashboard. It will have one input with the name <code>q</code>.</p>
 
         <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
         

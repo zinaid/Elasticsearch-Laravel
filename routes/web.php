@@ -4,17 +4,6 @@ use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
 use App\Papers\PapersRepository;
 
-/*
-|--------------------------------------------------------------------------
-| Web Routes
-|--------------------------------------------------------------------------
-|
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider within a group which
-| contains the "web" middleware group. Now create something great!
-|
-*/
-
 Route::get('/', function () {
     return view('welcome');
 });
@@ -22,7 +11,7 @@ Route::get('/', function () {
 Route::get('/dashboard', function (PapersRepository $repository) {
     return view('dashboard', [
         'papers' => request()->has('q')
-            ? $searchRepository->search(request('q'))
+            ? $repository->search(request('q'))
             : App\Models\Paper::all(),
     ]);
 })->middleware(['auth'])->name('dashboard'); 

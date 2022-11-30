@@ -257,11 +257,12 @@ We will create two ways of fetching data, using Eloquent and using Elasticsearch
 <?php
 
 namespace App\Papers;
+
 use Illuminate\Database\Eloquent\Collection;
 
-interface SearchRepository
+interface PapersRepository
 {
-    public function search(string $query): Collection;
+    public function search(string $query = ''): Collection;
 }
 ```
 
@@ -270,20 +271,70 @@ Then we will create our Eloquent search implementation inside the same folder Pa
 ```
 <?php
 
-namespace App\Articles;
+namespace App\Papers;
+
 use App\Models\Paper;
+use App\Papers\PapersRepository;
 use Illuminate\Database\Eloquent\Collection;
 
-class EloquentSearch implements SearchRepository
+class EloquentSearch implements PapersRepository
 {
-    public function search(string $term): Collection
+    public function search(string $query = ''): Collection
     {
         return Paper::query()
-            ->where(fn ($query) => (
-                $query->where('content', 'LIKE', "%{$term}%")
-                    ->orWhere('title', 'LIKE', "%{$term}%")
-            ))
+            ->where('content', 'like', "%{$query}%")
+            ->orWhere('title', 'like', "%{$query}%")
             ->get();
     }
 }
 ```` 
+
+Now we bind that interface in our AppServiceProviders.php.
+
+```
+<?php
+
+namespace App\Providers;
+use Illuminate\Support\ServiceProvider;
+use App\Papers\EloquentSearch;
+use App\Papers\PapersRepository;
+
+class AppServiceProvider extends ServiceProvider
+{
+    public function register()
+    {
+        $this->app->bind(
+            PapersRepository::class, EloquentSearch::class);
+    }
+
+    
+    public function boot()
+    {
+        //
+    }
+}
+```
+Then we need to modify our dashboard route in web.php because it needs to support searching for articles. It will accept `q` Query String and then it will use the repository we have created instead of listing papers.
+
+```
+<?php
+
+use App\Http\Controllers\ProfileController;
+use Illuminate\Support\Facades\Route;
+use App\Papers\PapersRepository;
+
+Route::get('/', function () {
+    return view('welcome');
+});
+
+Route::get('/dashboard', function (PapersRepository $repository) {
+    return view('dashboard', [
+        'papers' => request()->has('q')
+            ? $repository->search(request('q'))
+            : App\Models\Paper::all(),
+    ]);
+})->middleware(['auth'])->name('dashboard'); 
+```
+
+After that we will add our search input inside dashboard.blade.html. This will be a regular form with method GET and action to dashboard. It will have one input with the name `q`.
+
