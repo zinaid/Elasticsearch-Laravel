@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Route;
+use App\Papers\PapersRepository;
 
 /*
 |--------------------------------------------------------------------------
@@ -18,9 +19,11 @@ Route::get('/', function () {
     return view('welcome');
 });
 
-Route::get('/dashboard', function () {
+Route::get('/dashboard', function (PapersRepository $repository) {
     return view('dashboard', [
-        'papers' => App\Models\Paper::all(),
+        'papers' => request()->has('q')
+            ? $searchRepository->search(request('q'))
+            : App\Models\Paper::all(),
     ]);
 })->middleware(['auth'])->name('dashboard'); 
 

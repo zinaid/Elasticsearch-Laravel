@@ -1,9 +1,10 @@
 <?php
 
 namespace App\Papers;
+
 use Illuminate\Database\Eloquent\Collection;
 
-interface SearchRepository
+interface PapersRepository
 {
-    public function search(string $query): Collection;
+    public function search(string $query = ''): Collection;
 }

@@ -1,10 +1,9 @@
 <?php
 
 namespace App\Providers;
-
 use Illuminate\Support\ServiceProvider;
-use App\Papers\PapersRepository;
 use App\Papers\EloquentSearch;
+use App\Papers\PapersRepository;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -15,7 +14,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register()
     {
-        $this->app->bind(SearchRepository::class, EloquentSearch::class);
+        $this->app->bind(
+            PapersRepository::class, EloquentSearch::class);
     }
 
     /**
