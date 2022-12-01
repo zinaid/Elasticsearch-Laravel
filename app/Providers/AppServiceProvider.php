@@ -9,8 +9,18 @@ class AppServiceProvider extends ServiceProvider
 {
     public function register()
     {
-        $this->app->bind(
-            PapersRepository::class, EloquentSearch::class);
+        $this->app->bind(Papers\PapersRepository::class, function ($app) {
+            // This is useful in case we want to turn-off our
+            // search cluster or when deploying the search
+            // to a live, running application at first.
+            if (! config('services.search.enabled')) {
+                return new Papers\EloquentSearch();
+            }
+
+            return new Papers\Elasticsearch(
+                $app->make(Client::class)
+            );
+        });
     }
 
     

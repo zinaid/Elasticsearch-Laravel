@@ -342,6 +342,284 @@ Route::get('/dashboard', function (PapersRepository $repository) {
 })-&gt;middleware(['auth'])-&gt;name('dashboard'); 
 </code></pre>
 <p>After that we will add our search input inside dashboard.blade.html. This will be a regular form with method GET and action to dashboard. It will have one input with the name <code>q</code>.</p>
+<pre><code>&lt;x-app-layout&gt;
+     &lt;x-slot name=&quot;header&quot;&gt;
+         &lt;h2 class=&quot;font-semibold text-xl text-gray-800 leading-tight&quot;&gt;
+             {{ __('Papers') }} &lt;span class=&quot;text-gray-400&quot;&gt;({{ $papers-&gt;count() }})&lt;/span&gt;
+         &lt;/h2&gt;
+     &lt;/x-slot&gt;
+     &lt;div class=&quot;py-12&quot;&gt;
+         &lt;div class=&quot;max-w-7xl mx-auto sm:px-6 lg:px-8&quot;&gt;
+             &lt;div class=&quot;bg-white overflow-hidden shadow-sm sm:rounded-lg&quot;&gt;
+                 &lt;div class=&quot;p-6 bg-white border-b border-gray-200&quot;&gt;
+                     &lt;form action=&quot;{{ route('dashboard') }}&quot; method=&quot;get&quot; class=&quot;pb-4&quot;&gt;
+                         &lt;div class=&quot;form-group&quot;&gt;
+                             &lt;x-text-input
+                                 type=&quot;text&quot;
+                                 name=&quot;q&quot;
+                                 class=&quot;form-control&quot;
+                                 placeholder=&quot;Search...&quot;
+                                 value=&quot;{{ request('q') }}&quot;
+                             /&gt;
+                         &lt;/div&gt;
+                     &lt;/form&gt;
+                     @if (request()-&gt;has('q'))
+                         &lt;p class=&quot;text-sm&quot;&gt;Using search: &lt;strong&gt;&quot;{{ request('q') }}&quot;&lt;/strong&gt;. &lt;a class=&quot;border-b border-indigo-800 text-indigo-800&quot; href=&quot;{{ route('dashboard') }}&quot;&gt;Clear filters&lt;/a&gt;&lt;/p&gt;
+                     @endif
+                     &lt;div class=&quot;mt-8 space-y-8&quot;&gt;
+                         @forelse ($papers as $paper)
+                             &lt;article class=&quot;space-y-1&quot;&gt;
+                                 &lt;h2 class=&quot;font-semibold text-2xl&quot;&gt;{{ $paper-&gt;title }}&lt;/h2&gt;
+                                 &lt;p class=&quot;m-0&quot;&gt;{{ $paper-&gt;body }}&lt;/body&gt;
+                                 &lt;div&gt;
+                                     @foreach ($paper-&gt;keywords as $keyword)
+                                         &lt;span class=&quot;text-xs px-2 py-1 rounded bg-indigo-50 text-indigo-500&quot;&gt;{{ $keyword}}&lt;/span&gt;
+                                     @endforeach
+                                 &lt;/div&gt;
+                             &lt;/article&gt;
+                         @empty
+                             &lt;p&gt;No papers found&lt;/p&gt;
+                         @endforelse
+                     &lt;/div&gt;
+                 &lt;/div&gt;
+             &lt;/div&gt;
+         &lt;/div&gt;
+     &lt;/div&gt;
+ &lt;/x-app-layout&gt; 
+</code></pre>
+<h2 id="elasticsearch-variant-of-search">ELASTICSEARCH VARIANT OF SEARCH</h2>
+<p>Elasticsearch uses REST Api to connect with its database. Now we need to connect our Eloquent models we want to index to it and send HTTP requests to Elasticsearch API. We are going to use Model Observers bacause it allows us the same setup for different model types we need to index.</p>
+<p>Elasticsearch observer is created with command:</p>
+<pre><code>&lt;?php
+
+namespace App\Search;
+
+use Elasticsearch\Client;
+
+class ElasticsearchObserver
+{
+    public function __construct(private Client $elasticsearchClient)
+    {
+        // ...
+    }
+
+    public function saved($model)
+    {
+        $model-&gt;elasticSearchIndex($this-&gt;elasticsearchClient);
+    }
+
+    public function deleted($model)
+    {
+        $model-&gt;elasticSearchDelete($this-&gt;elasticsearchClient);
+    }
+}
+</code></pre>
+<p>Now we bind this observer in all of our Models that we want to index in Elasticsearch. We do that creating a new trait. This trait is going to be called Searchable trait. This trait will provide methods the observer uses.</p>
+<pre><code>&lt;?php
+
+namespace App\Search;
+
+trait Searchable
+{
+    public static function bootSearchable()
+    {
+        // This makes it easy to toggle the search feature flag
+        // on and off. This is going to prove useful later on
+        // when deploy the new search engine to a live app.
+        if (config('services.search.enabled')) {
+            static::observe(ElasticSearchObserver::class);
+        }
+    }
+
+    public function getSearchIndex()
+    {
+        return $this-&gt;getTable();
+    }
+
+    public function getSearchType()
+    {
+        if (property_exists($this, 'useSearchType')) {
+            return $this-&gt;useSearchType;
+        }
+
+        return $this-&gt;getTable();
+    }
+
+    public function toSearchArray()
+    {
+        // By having a custom method that transforms the model
+        // to a searchable array allows us to customize the
+        // data that's going to be searchable per model.
+        return $this-&gt;toArray();
+    }
+}
+</code></pre>
+<p>Now when we can use this trait in any model we want.</p>
+<pre><code>&lt;?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use App\Search\Searchable;
+
+class Paper extends Model
+{
+    use HasFactory;
+    use Searchable;
+
+    protected $casts = [
+        'keywords' =&gt; 'json',
+    ];
+}
+
+</code></pre>
+<p>When we create, delete or update Paper using Eloquent we trigger ElasticsearchObserver that syncs the data. This proccess is synchronous HTTP request. We may upgrade this using some Queue messaging platform (that is a project upgrade for future).</p>
+<p>We now can feed Elasticsearch with papers. Now we can create a new implementation of
+our SearchRepository interface, this time with elasticsearch methods.</p>
+<pre><code>&lt;?php
+
+namespace App\Papers;
+
+use App\Paper;
+use Elasticsearch\Client;
+use Illuminate\Support\Arr;
+use Illuminate\Database\Eloquent\Collection;
+
+class ElasticsearchRepository implements ArticlesRepository
+{
+    /** @var \Elasticsearch\Client */
+    private $elasticsearch;
+
+    public function __construct(Client $elasticsearch)
+    {
+        $this-&gt;elasticsearch = $elasticsearch;
+    }
+
+    public function search(string $query = ''): Collection
+    {
+        $items = $this-&gt;searchOnElasticsearch($query);
+
+        return $this-&gt;buildCollection($items);
+    }
+
+    private function searchOnElasticsearch(string $query = ''): array
+    {
+        $model = new Paper;
+
+        $items = $this-&gt;elasticsearch-&gt;search([
+            'index' =&gt; $model-&gt;getSearchIndex(),
+            'type' =&gt; $model-&gt;getSearchType(),
+            'body' =&gt; [
+                'query' =&gt; [
+                    'multi_match' =&gt; [
+                        'fields' =&gt; ['title^5', 'body', 'tags'],
+                        'query' =&gt; $query,
+                    ],
+                ],
+            ],
+        ]);
+
+        return $items;
+    }
+
+    private function buildCollection(array $items): Collection
+    {
+        $ids = Arr::pluck($items['hits']['hits'], '_id');
+
+        return Paper::findMany($ids)
+            -&gt;sortBy(function ($article) use ($ids) {
+                return array_search($article-&gt;getKey(), $ids);
+            });
+    }
+}
+</code></pre>
+<p>We perform search using Elasticsearch, and then we do findMany SQL search using items provided by the search.</p>
+<p>We can also switch between the repository by modifying binding in the ServiceProvider:</p>
+<pre><code> public function register()
+    {
+        $this-&gt;app-&gt;bind(Articles\ArticlesRepository::class, function ($app) {
+            // This is useful in case we want to turn-off our
+            // search cluster or when deploying the search
+            // to a live, running application at first.
+            if (! config('services.search.enabled')) {
+                return new Articles\EloquentRepository();
+            }
+
+            return new Articles\ElasticsearchRepository(
+                $app-&gt;make(Client::class)
+            );
+        });
+    }
+</code></pre>
+<<<<<<< HEAD
+<p>Now, when we ask for PapersRepository interfaced object it will give an Elasticsearch instance if it is enabled, otherwise it will return Eloquent version. We do some customization for elasticsearch client and bind it in the AppServiceProvider.</p>
+<pre><code>&lt;?php
+
+namespace App\Providers;
+
+use App\Papers;
+use Elasticsearch\Client;
+use Elasticsearch\ClientBuilder;
+use Illuminate\Support\ServiceProvider;
+
+class AppServiceProvider extends ServiceProvider
+{
+    /**
+     * Register any application services.
+     *
+     * @return void
+     */
+    public function register()
+    {
+        $this-&gt;app-&gt;bind(Papers\PapersRepository::class, function () {
+            // This is useful in case we want to turn-off our
+            // search cluster or when deploying the search
+            // to a live, running application at first.
+            if (! config('services.search.enabled')) {
+                return new Papers\EloquentSearch();
+            }
+
+            return new Papers\Elasticsearch(
+                $app-&gt;make(Client::class)
+            );
+        });
+
+        $this-&gt;bindSearchClient();
+    }
+
+    private function bindSearchClient()
+    {
+        $this-&gt;app-&gt;bind(Client::class, function ($app) {
+            return ClientBuilder::create()
+                -&gt;setHosts($app['config']-&gt;get('services.search.hosts'))
+                -&gt;build();
+        });
+    }
+}
+</code></pre>
+<p>Next we finish configuration. We change config/services.php.</p>
+<pre><code>'search' =&gt; [
+    'enabled' =&gt; env('ELASTICSEARCH_ENABLED', false),
+    'hosts' =&gt; explode(',', env('ELASTICSEARCH_HOSTS')),
+],
+</code></pre>
+<p>After we set configuration we also define environment variables in .env file.</p>
+<pre><code>ELASTICSEARCH_ENABLED=true
+ELASTICSEARCH_HOSTS=&quot;localhost:9200&quot;
+</code></pre>
+<p>Next we need to populate Elasticsearch with our existing data. For that we will create a custom artisan command. This command can be used later if we change our schemes of our Elasticsearch indexes.</p>
+<p>We are exploding the hosts here to allow passing multiple hosts using a comma-separated list, but we are not using that at the moment. If you have your php server running, don’t forget to reload it so it fetches the new configs. After that, we need to populate Elasticsearch with our existing data.</p>
+<p>We create CLI command:</p>
+<pre><code>./vendor/bin/sail php artisan make:command ReindexCommand --command=&quot;search:reindex&quot;
+</code></pre>
+<p>And then we modify our ReindexCommand as:</p>
+<pre><code></code></pre>
+<p>This command is called with:</p>
+<pre><code>./vendor/bin/sail php artisan search:reindex
+</code></pre>
+=======
+>>>>>>> parent of 37a2554 (App servise provider change)
 
         <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
         
