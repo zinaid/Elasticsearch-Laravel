@@ -552,7 +552,6 @@ class ElasticsearchRepository implements ArticlesRepository
         });
     }
 </code></pre>
-<<<<<<< HEAD
 <p>Now, when we ask for PapersRepository interfaced object it will give an Elasticsearch instance if it is enabled, otherwise it will return Eloquent version. We do some customization for elasticsearch client and bind it in the AppServiceProvider.</p>
 <pre><code>&lt;?php
 
@@ -618,8 +617,6 @@ ELASTICSEARCH_HOSTS=&quot;localhost:9200&quot;
 <p>This command is called with:</p>
 <pre><code>./vendor/bin/sail php artisan search:reindex
 </code></pre>
-=======
->>>>>>> parent of 37a2554 (App servise provider change)
 
         <script async src="https://cdn.jsdelivr.net/npm/katex-copytex@latest/dist/katex-copytex.min.js"></script>
         

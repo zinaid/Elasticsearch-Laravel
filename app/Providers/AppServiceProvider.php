@@ -1,12 +1,19 @@
 <?php
 
 namespace App\Providers;
+
+use App\Papers;
+use Elasticsearch\Client;
+use Elasticsearch\ClientBuilder;
 use Illuminate\Support\ServiceProvider;
-use App\Papers\EloquentSearch;
-use App\Papers\PapersRepository;
 
 class AppServiceProvider extends ServiceProvider
 {
+    /**
+     * Register any application services.
+     *
+     * @return void
+     */
     public function register()
     {
         $this->app->bind(Papers\PapersRepository::class, function ($app) {
@@ -21,11 +28,16 @@ class AppServiceProvider extends ServiceProvider
                 $app->make(Client::class)
             );
         });
+
+        $this->bindSearchClient();
     }
 
-    
-    public function boot()
+    private function bindSearchClient()
     {
-        //
+        $this->app->bind(Client::class, function ($app) {
+            return ClientBuilder::create()
+                ->setHosts($app['config']->get('services.search.hosts'))
+                ->build();
+        });
     }
 }

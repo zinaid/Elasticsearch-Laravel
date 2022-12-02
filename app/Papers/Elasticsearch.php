@@ -2,12 +2,12 @@
 
 namespace App\Papers;
 
-use App\Paper;
+use App\Models\Paper;
 use Elasticsearch\Client;
 use Illuminate\Support\Arr;
 use Illuminate\Database\Eloquent\Collection;
-
-class ElasticsearchRepository implements ArticlesRepository
+ 
+class Elasticsearch implements PapersRepository
 {
     /** @var \Elasticsearch\Client */
     private $elasticsearch;
@@ -53,4 +53,4 @@ class ElasticsearchRepository implements ArticlesRepository
                 return array_search($article->getKey(), $ids);
             });
     }
-}
+} 

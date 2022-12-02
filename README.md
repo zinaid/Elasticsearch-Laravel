@@ -566,7 +566,6 @@ We can also switch between the repository by modifying binding in the ServicePro
             );
         });
     }
-<<<<<<< HEAD
 ```
 
 Now, when we ask for PapersRepository interfaced object it will give an Elasticsearch instance if it is enabled, otherwise it will return Eloquent version. We do some customization for elasticsearch client and bind it in the AppServiceProvider.
@@ -651,6 +650,4 @@ And then we modify our ReindexCommand as:
 This command is called with:
 ```
 ./vendor/bin/sail php artisan search:reindex
-=======
->>>>>>> parent of 37a2554 (App servise provider change)
 ```
