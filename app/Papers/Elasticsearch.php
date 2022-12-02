@@ -34,7 +34,7 @@ class Elasticsearch implements PapersRepository
             'body' => [
                 'query' => [
                     'multi_match' => [
-                        'fields' => ['title^5', 'body', 'tags'],
+                        'fields' => ['title^5', 'content', 'keywords'],
                         'query' => $query,
                     ],
                 ],

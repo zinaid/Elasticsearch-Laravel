@@ -613,7 +613,61 @@ ELASTICSEARCH_HOSTS=&quot;localhost:9200&quot;
 <pre><code>./vendor/bin/sail php artisan make:command ReindexCommand --command=&quot;search:reindex&quot;
 </code></pre>
 <p>And then we modify our ReindexCommand as:</p>
-<pre><code></code></pre>
+<pre><code>&lt;?php
+
+namespace App\Console\Commands;
+
+use App\Models\Paper;
+use Elasticsearch\Client;
+use Illuminate\Console\Command;
+
+class ReindexCommand extends Command
+{
+    /**
+     * The name and signature of the console command.
+     *
+     * @var string
+     */
+    protected $signature = 'search:reindex';
+
+    /**
+     * The console command description.
+     *
+     * @var string
+     */
+    protected $description = 'Indexes all articles to Elasticsearch';
+
+    /** @var \Elasticsearch\Client */
+    private $elasticsearch;
+
+    public function __construct(Client $elasticsearch)
+    {
+        parent::__construct();
+
+        $this-&gt;elasticsearch = $elasticsearch;
+    }
+
+    public function handle()
+    {
+        $this-&gt;info('Indexing all papers...');
+
+        foreach (Paper::cursor() as $paper)
+        {
+            $this-&gt;elasticsearch-&gt;index([
+                'index' =&gt; $paper-&gt;getSearchIndex(),
+                'type' =&gt; $paper-&gt;getSearchType(),
+                'id' =&gt; $paper-&gt;getKey(),
+                'body' =&gt; $paper-&gt;toSearchArray(),
+            ]);
+
+            // PHPUnit-style feedback
+            $this-&gt;output-&gt;write('.');
+        }
+
+        $this-&gt;info(&quot;\nDone!&quot;);
+    }
+}
+</code></pre>
 <p>This command is called with:</p>
 <pre><code>./vendor/bin/sail php artisan search:reindex
 </code></pre>
